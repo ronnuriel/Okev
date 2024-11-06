@@ -25,7 +25,7 @@ def parse_arguments():
     parser.add_argument('--connect', help="Vehicle connection target string.")
     parser.add_argument('--rtl', action='store_true', help="Return to launch at the end of the mission.")
     parser.add_argument('--acro', action='store_true', help="Start in ACRO mode with keyboard control.")
-    parser.add_argument('--test_roll', action='store_true', help="Perform roll test: set roll to -50 from middle for 5 seconds, then +50 for 7 seconds.")
+    parser.add_argument('--test', action='store_true', help="Perform a test of pitch, yaw, and roll channels.")
     return parser.parse_args()
 
 def arm_and_takeoff(vehicle):
@@ -286,7 +286,7 @@ def main():
         print(f"Roll Rate: {roll_rate}")
 
         # Proceed with the remaining setup as per user-specified arguments
-        if args.test_roll:
+        if args.test:
             test_roll(vehicle)
             vehicle.mode = VehicleMode("STABILIZE")
             time.sleep(5)

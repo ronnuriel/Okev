@@ -9,13 +9,22 @@ import argparse
 import pygame
 
 # Channel mappings for Arduplane
+Roll = 1  # Added Roll channel
 Pitch = 2
 Throttle = 3
 Yaw = 4
-Roll = 1  # Added Roll channel
 
 # Neutral PWM value
 NEUTRAL_PWM = 1500
+
+#Roll rate factor
+ROLL_RATE_FACTOR = 0 # Set to 0 for now
+
+# Yaw rate factor
+YAW_RATE_FACTOR = 0 # Set to 0 for now
+
+# Pitch rate factor
+PITCH_RATE_FACTOR = 0 # Set to 0 for now
 
 # Control parameter defaults
 control_params = {Pitch: NEUTRAL_PWM, Yaw: NEUTRAL_PWM, Throttle: NEUTRAL_PWM, Roll: NEUTRAL_PWM}
@@ -114,13 +123,17 @@ def update_control_params_from_keyboard(vehicle):
     control_params[Throttle] = max(1000, min(2000, control_params[Throttle]))
     control_params[Roll] = max(1000, min(2000, control_params[Roll]))
 
-def test_roll(vehicle):
+
+#    roll_left = NEUTRAL_PWM + (degree_per_second * ROLL_RATE_FACTOR)
+#   roll_right = NEUTRAL_PWM + (degree_per_second * ROLL_RATE_FACTOR)
+
+def test_roll(vehicle, degree_per_second):
     """
     Perform a test to set the roll channel to -50 from middle (1450) for 5 seconds,
     then +50 from middle (1550) for 7 seconds.
     """
-    roll_left = NEUTRAL_PWM - 50  # 1450
-    roll_right = NEUTRAL_PWM + 70  # 1550
+    roll_left = NEUTRAL_PWM + (degree_per_second * ROLL_RATE_FACTOR)
+    roll_right = NEUTRAL_PWM + (degree_per_second * ROLL_RATE_FACTOR)
     # Wait for the vehicle to switch to STABILIZE mode
     print("Waiting for STABILIZE mode...")
     while vehicle.mode.name != "STABILIZE":
@@ -280,10 +293,17 @@ def main():
         yaw_rate = vehicle.parameters.get('ACRO_YAW_RATE', None)
         roll_rate = vehicle.parameters.get('ACRO_ROLL_RATE', None)
 
+        ROLL_RATE_FACTOR = 500/roll_rate
+        YAW_RATE_FACTOR = 500/yaw_rate
+        PITCH_RATE_FACTOR = 500/pitch_rate
+
         print("Initial ACRO mode rates:")
+        print("-" * 50)
         print(f"Pitch Rate: {pitch_rate}")
         print(f"Yaw Rate: {yaw_rate}")
         print(f"Roll Rate: {roll_rate}")
+        print("-" * 50)
+
 
         # Proceed with the remaining setup as per user-specified arguments
         if args.test:

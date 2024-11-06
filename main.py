@@ -273,63 +273,48 @@ def main():
     print(f'Connecting to vehicle on: {connection_string}')
     vehicle = connect(connection_string, wait_ready=True)
 
+    # Print ACRO mode pitch, yaw, and roll rates once after connection
     try:
-        # arm_and_takeoff(vehicle)
+        # Assuming `vehicle` has attributes or parameters for pitch, yaw, and roll rates in ACRO mode
+        pitch_rate = vehicle.parameters.get('ACRO_PITCH_RATE', None)
+        yaw_rate = vehicle.parameters.get('ACRO_YAW_RATE', None)
+        roll_rate = vehicle.parameters.get('ACRO_ROLL_RATE', None)
 
-        # print("Setting target airspeed to 10")
-        # vehicle.airspeed = 10
+        print("Initial ACRO mode rates:")
+        print(f"Pitch Rate: {pitch_rate}")
+        print(f"Yaw Rate: {yaw_rate}")
+        print(f"Roll Rate: {roll_rate}")
 
-        # Check if we should run the roll test
+        # Proceed with the remaining setup as per user-specified arguments
         if args.test_roll:
-
-            ################Test Roll################
             test_roll(vehicle)
-            print("Roll test complete")
-            #########################################
-
-            #Switch to STABILIZE mode
             vehicle.mode = VehicleMode("STABILIZE")
             time.sleep(5)
-
-            ##############Test pitch################
             test_pitch(vehicle)
-            print("Pitch test complete")
-            #########################################
-
-            #Switch to STABILIZE mode
             vehicle.mode = VehicleMode("STABILIZE")
             time.sleep(5)
-
-            ##############Test Yaw################
             test_yaw(vehicle)
-            print("Yaw test complete")
-            #########################################
-
-
         elif args.acro:
-            # Start in ACRO mode with keyboard control
             vehicle.mode = VehicleMode("ACRO")
             print("Starting in ACRO mode")
             activate_acro_mode(vehicle)
         else:
-            # Start in AUTO mode
             vehicle.mode = VehicleMode("AUTO")
             print("Starting in AUTO mode")
 
     finally:
-        # Close vehicle object before exiting script
-        # Moving to STABILIZE mode before closing
+        # Close vehicle object and clean up
         vehicle.mode = VehicleMode("STABILIZE")
-
-
-        print("Close vehicle object")
+        print("Closing vehicle connection.")
         vehicle.close()
 
-        # Shut down simulator if it was started
+        # Shut down SITL if started
         if sitl:
             sitl.stop()
-        pygame.quit()  # Quit pygame
+        pygame.quit()
         print("Completed")
+
+
 
 if __name__ == "__main__":
     main()

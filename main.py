@@ -9,7 +9,7 @@ import argparse
 import pygame
 
 # Channel mappings for Arduplane
-Roll = 1  # Added Roll channel
+Roll = 1
 Pitch = 2
 Throttle = 3
 Yaw = 4
@@ -17,14 +17,10 @@ Yaw = 4
 # Neutral PWM value
 NEUTRAL_PWM = 1500
 
-#Roll rate factor
-ROLL_RATE_FACTOR = 0 # Set to 0 for now
-
-# Yaw rate factor
-YAW_RATE_FACTOR = 0 # Set to 0 for now
-
-# Pitch rate factor
-PITCH_RATE_FACTOR = 0 # Set to 0 for now
+# Rate factors initialized to 0
+ROLL_RATE_FACTOR = 0
+YAW_RATE_FACTOR = 0
+PITCH_RATE_FACTOR = 0
 
 # Control parameter defaults
 control_params = {Pitch: NEUTRAL_PWM, Yaw: NEUTRAL_PWM, Throttle: NEUTRAL_PWM, Roll: NEUTRAL_PWM}
@@ -77,31 +73,31 @@ def update_control_params_from_keyboard(vehicle):
     # Control increments
     pitch_increment = 50
     yaw_increment = 50
-    throttle_increment = 10  # Smaller increment for finer throttle control
+    throttle_increment = 10
     roll_increment = 50
 
     # Check for keyboard input events
     keys = pygame.key.get_pressed()
 
-    # Adjust pitch (DOWN and UP arrow keys, reversed logic)
-    if keys[pygame.K_DOWN]:  # Down key increases pitch (move up)
+    # Adjust pitch
+    if keys[pygame.K_DOWN]:  # Down key increases pitch
         control_params[Pitch] += pitch_increment
-    elif keys[pygame.K_UP]:  # Up key decreases pitch (move down)
+    elif keys[pygame.K_UP]:  # Up key decreases pitch
         control_params[Pitch] -= pitch_increment
 
-    # Adjust yaw (LEFT and RIGHT arrow keys)
+    # Adjust yaw
     if keys[pygame.K_LEFT]:
         control_params[Yaw] -= yaw_increment
     elif keys[pygame.K_RIGHT]:
         control_params[Yaw] += yaw_increment
 
-    # Adjust throttle (W and S keys)
+    # Adjust throttle
     if keys[pygame.K_w]:  # Increase throttle
         control_params[Throttle] += throttle_increment
     elif keys[pygame.K_s]:  # Decrease throttle
         control_params[Throttle] -= throttle_increment
 
-    # Adjust roll (A and D keys)
+    # Adjust roll
     if keys[pygame.K_a]:
         control_params[Roll] -= roll_increment
     elif keys[pygame.K_d]:
@@ -123,151 +119,114 @@ def update_control_params_from_keyboard(vehicle):
     control_params[Throttle] = max(1000, min(2000, control_params[Throttle]))
     control_params[Roll] = max(1000, min(2000, control_params[Roll]))
 
+def calculate_roll_pwm(degree_per_second):
+    roll_left = NEUTRAL_PWM - (degree_per_second * ROLL_RATE_FACTOR)
+    roll_right = NEUTRAL_PWM + (degree_per_second * ROLL_RATE_FACTOR)
+    return int(roll_left), int(roll_right)
 
-#    roll_left = NEUTRAL_PWM + (degree_per_second * ROLL_RATE_FACTOR)
-#   roll_right = NEUTRAL_PWM + (degree_per_second * ROLL_RATE_FACTOR)
+def calculate_yaw_pwm(degree_per_second):
+    yaw_left = NEUTRAL_PWM - (degree_per_second * YAW_RATE_FACTOR)
+    yaw_right = NEUTRAL_PWM + (degree_per_second * YAW_RATE_FACTOR)
+    return int(yaw_left), int(yaw_right)
+
+def calculate_pitch_pwm(degree_per_second):
+    pitch_down = NEUTRAL_PWM - (degree_per_second * PITCH_RATE_FACTOR)
+    pitch_up = NEUTRAL_PWM + (degree_per_second * PITCH_RATE_FACTOR)
+    return int(pitch_down), int(pitch_up)
 
 def test_roll(vehicle, degree_per_second):
-    """
-    Perform a test to set the roll channel to -50 from middle (1450) for 5 seconds,
-    then +50 from middle (1550) for 7 seconds.
-    """
-    roll_left = NEUTRAL_PWM + (degree_per_second * ROLL_RATE_FACTOR)
-    roll_right = NEUTRAL_PWM + (degree_per_second * ROLL_RATE_FACTOR)
-    # Wait for the vehicle to switch to STABILIZE mode
+    roll_left, roll_right = calculate_roll_pwm(degree_per_second)
+
     print("Waiting for STABILIZE mode...")
     while vehicle.mode.name != "STABILIZE":
         time.sleep(1)
 
-    print("Switched to STABILIZE mode successfully. Starting Test...")
-    print("Pitch test starting...")
+    time.sleep(5) # Wait for the vehicle to stabilize
 
-    # Change vehicle mode to ACRO
+    print("Switched to STABILIZE mode successfully. Starting Roll Test...")
     vehicle.mode = VehicleMode("ACRO")
-    print("Roll test starting...")
-
-    #Setting Throttle to 1500
     vehicle.channels.overrides[Throttle] = 2000
 
-    # Set roll to 1450 (-50 from middle)
     vehicle.channels.overrides[Roll] = roll_left
     print(f"Setting roll to {roll_left} for 5 seconds")
     time.sleep(5)
 
-    # Set roll to 1550 (+50 from middle)
     vehicle.channels.overrides[Roll] = roll_right
     print(f"Setting roll to {roll_right} for 7 seconds")
-    time.sleep(10)
+    time.sleep(3)
 
-    # Clear the overrides
     vehicle.channels.overrides[Roll] = None
     vehicle.channels.overrides[Throttle] = None
     print("Roll test complete. Overrides cleared.")
 
-def test_pitch(vehicle):
-    """
-    Perform a test to set the pitch channel to -50 from middle (1450) for 5 seconds,
-    then +50 from middle (1550) for 7 seconds.
-    """
-    pitch_down = NEUTRAL_PWM - 50  # 1450
-    pitch_up = NEUTRAL_PWM + 50  # 1550
-    # Wait for the vehicle to switch to STABILIZE mode
+def test_pitch(vehicle, degree_per_second):
+    pitch_down, pitch_up = calculate_pitch_pwm(degree_per_second)
+
     print("Waiting for STABILIZE mode...")
     while vehicle.mode.name != "STABILIZE":
         time.sleep(1)
 
-    print("Switched to STABILIZE mode successfully. Starting Test...")
-    print("Pitch test starting...")
+    time.sleep(3) # Wait for the vehicle to stabilize
 
-    # Change vehicle mode to ACRO
+    print("Switched to STABILIZE mode successfully. Starting Pitch Test...")
     vehicle.mode = VehicleMode("ACRO")
-
-    # Setting Throttle to 1500
     vehicle.channels.overrides[Throttle] = 2000
 
-    # Set pitch to 1450 (-50 from middle)
     vehicle.channels.overrides[Pitch] = pitch_down
     print(f"Setting pitch to {pitch_down} for 2 seconds")
     time.sleep(2)
 
-    # Set pitch to 1550 (+50 from middle)
     vehicle.channels.overrides[Pitch] = pitch_up
     print(f"Setting pitch to {pitch_up} for 2 seconds")
     time.sleep(2)
 
-    # Clear the overrides
     vehicle.channels.overrides[Pitch] = None
     vehicle.channels.overrides[Throttle] = None
     print("Pitch test complete. Overrides cleared.")
 
+def test_yaw(vehicle, degree_per_second):
+    yaw_left, yaw_right = calculate_yaw_pwm(degree_per_second)
 
-def test_yaw(vehicle):
-    """
-    Perform a test to set the yaw channel to -50 from middle (1450) for 5 seconds,
-    then +50 from middle (1550) for 7 seconds.
-    """
-    yaw_left = NEUTRAL_PWM - 200  # 1450
-    yaw_right = NEUTRAL_PWM + 200  # 1550
-    # Wait for the vehicle to switch to STABILIZE mode
     print("Waiting for STABILIZE mode...")
     while vehicle.mode.name != "STABILIZE":
         time.sleep(1)
 
-    print("Switched to STABILIZE mode successfully. Starting yaw test...")
-    print("Yaw test starting...")
-    # Change vehicle mode to ACRO
-    vehicle.mode = VehicleMode("ACRO")
+    time.sleep(3) # Wait for the vehicle to stabilize
 
-    #Setting Throttle to 1500
+    print("Switched to STABILIZE mode successfully. Starting Yaw Test...")
+    vehicle.mode = VehicleMode("ACRO")
     vehicle.channels.overrides[Throttle] = 2000
 
-    # Set yaw to 1450 (-50 from middle)
     vehicle.channels.overrides[Yaw] = yaw_left
     print(f"Setting yaw to {yaw_left} for 5 seconds")
     time.sleep(5)
 
-    # Set yaw to 1550 (+50 from middle)
     vehicle.channels.overrides[Yaw] = yaw_right
     print(f"Setting yaw to {yaw_right} for 10 seconds")
     time.sleep(10)
 
-    # Clear the overrides
     vehicle.channels.overrides[Yaw] = None
     vehicle.channels.overrides[Throttle] = None
     print("Yaw test complete. Overrides cleared.")
 
-
 def activate_acro_mode(vehicle):
-    """
-    Main loop for controlling the vehicle with keyboard input.
-    Handles mode switching between ACRO and AUTO as well.
-    """
-    # Initialize keyboard for pygame
     initialize_keyboard()
 
-    # Main control loop
     try:
         while True:
-            # Process pygame events to capture keyboard state
             pygame.event.pump()
-
-            # Update control parameters from keyboard, including mode switching
             update_control_params_from_keyboard(vehicle)
 
-            # Only apply control parameters if in ACRO mode
             if vehicle.mode.name == "ACRO":
                 for channel, value in control_params.items():
                     print(f"Setting channel {channel} to {value}")
                     vehicle.channels.overrides[channel] = value
             else:
-                # Clear overrides in non-ACRO modes
                 vehicle.channels.overrides = {}
 
-            # Short sleep to avoid excessive CPU usage
             time.sleep(0.1)
 
     except KeyboardInterrupt:
-        # Clear the overrides when stopping
         print("Clearing channel overrides and exiting ACRO mode.")
         vehicle.channels.overrides = {}
 
@@ -276,44 +235,37 @@ def main():
     connection_string = args.connect
     sitl = None
 
-    # Start SITL if no connection string specified
     if not connection_string:
         import dronekit_sitl
         sitl = dronekit_sitl.start_default(vehicle='plane')
         connection_string = sitl.connection_string()
 
-    # Connect to the Vehicle
     print(f'Connecting to vehicle on: {connection_string}')
     vehicle = connect(connection_string, wait_ready=True)
 
-    # Print ACRO mode pitch, yaw, and roll rates once after connection
     try:
-        # Assuming `vehicle` has attributes or parameters for pitch, yaw, and roll rates in ACRO mode
         pitch_rate = vehicle.parameters.get('ACRO_PITCH_RATE', None)
         yaw_rate = vehicle.parameters.get('ACRO_YAW_RATE', None)
         roll_rate = vehicle.parameters.get('ACRO_ROLL_RATE', None)
 
-        ROLL_RATE_FACTOR = 500/roll_rate
-        YAW_RATE_FACTOR = 500/yaw_rate
-        PITCH_RATE_FACTOR = 500/pitch_rate
+        global ROLL_RATE_FACTOR, YAW_RATE_FACTOR, PITCH_RATE_FACTOR
+        ROLL_RATE_FACTOR = 500 / roll_rate if roll_rate else 1
+        YAW_RATE_FACTOR = 500 / yaw_rate if yaw_rate else 1
+        PITCH_RATE_FACTOR = 500 / pitch_rate if pitch_rate else 1
 
         print("Initial ACRO mode rates:")
-        print("-" * 50)
         print(f"Pitch Rate: {pitch_rate}")
         print(f"Yaw Rate: {yaw_rate}")
         print(f"Roll Rate: {roll_rate}")
-        print("-" * 50)
 
-
-        # Proceed with the remaining setup as per user-specified arguments
         if args.test:
-            test_roll(vehicle)
+            test_roll(vehicle, 20)
             vehicle.mode = VehicleMode("STABILIZE")
             time.sleep(5)
-            test_pitch(vehicle)
+            test_pitch(vehicle, 15)
             vehicle.mode = VehicleMode("STABILIZE")
             time.sleep(5)
-            test_yaw(vehicle)
+            test_yaw(vehicle, 90)
         elif args.acro:
             vehicle.mode = VehicleMode("ACRO")
             print("Starting in ACRO mode")
@@ -323,18 +275,14 @@ def main():
             print("Starting in AUTO mode")
 
     finally:
-        # Close vehicle object and clean up
-        vehicle.mode = VehicleMode("STABILIZE")
+        vehicle.mode = VehicleMode("RTL")
         print("Closing vehicle connection.")
         vehicle.close()
 
-        # Shut down SITL if started
         if sitl:
             sitl.stop()
         pygame.quit()
         print("Completed")
-
-
 
 if __name__ == "__main__":
     main()

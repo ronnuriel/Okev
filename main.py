@@ -27,6 +27,7 @@ csv_file = open("telemetry_log.csv", mode="w", newline="")
 csv_writer = csv.writer(csv_file)
 csv_writer.writerow(["time", "vehicle_mode", "pitch", "yaw", "roll", "throttle", "command_sent"])
 
+
 def log_to_csv(vehicle, pitch=None, yaw=None, roll=None, throttle=None, command=""):
     """
     Logs the current vehicle mode, pitch, yaw, roll, and throttle to the CSV file.
@@ -41,11 +42,13 @@ def log_to_csv(vehicle, pitch=None, yaw=None, roll=None, throttle=None, command=
         command
     ])
 
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Commands Arduplane using waypoints.')
     parser.add_argument('--connect', help="Vehicle connection target string.")
     parser.add_argument('--test', action='store_true', help="Perform a test of pitch, yaw, and roll channels.")
     return parser.parse_args()
+
 
 def arm_and_takeoff(vehicle):
     print("Basic pre-arm checks")
@@ -63,15 +66,18 @@ def arm_and_takeoff(vehicle):
 
     print("Vehicle armed. Takeoff handled in AUTO mode.")
 
+
 def calculate_roll_pwm(degree_per_second):
     roll_left = NEUTRAL_PWM - (degree_per_second * ROLL_RATE_FACTOR)
     roll_right = NEUTRAL_PWM + (degree_per_second * ROLL_RATE_FACTOR)
     return int(roll_left), int(roll_right)
 
+
 def calculate_yaw_pwm(degree_per_second):
     yaw_left = NEUTRAL_PWM - (degree_per_second * YAW_RATE_FACTOR)
     yaw_right = NEUTRAL_PWM + (degree_per_second * YAW_RATE_FACTOR)
     return int(yaw_left), int(yaw_right)
+
 
 def calculate_pitch_pwm(degree_per_second):
     pitch_down = NEUTRAL_PWM - (degree_per_second * PITCH_RATE_FACTOR)
@@ -116,7 +122,8 @@ def ground_tests(vehicle):
         print("Battery status unavailable!")
     else:
         print(f"Battery voltage: {vehicle.battery.voltage}V, Battery level: {vehicle.battery.level}%")
-        log_to_csv(vehicle, command=f"Battery check - Voltage: {vehicle.battery.voltage}, Level: {vehicle.battery.level}%")
+        log_to_csv(vehicle,
+                   command=f"Battery check - Voltage: {vehicle.battery.voltage}, Level: {vehicle.battery.level}%")
 
     # 3. Verify control channel responses
     print("Testing control channels for response...")
@@ -128,6 +135,7 @@ def ground_tests(vehicle):
     log_to_csv(vehicle, command="Control channel check complete")
 
     print("Ground tests complete. Ready for main tests.")
+
 
 def test_roll(vehicle, degree_per_second):
     roll_left, roll_right = calculate_roll_pwm(degree_per_second)
@@ -146,7 +154,42 @@ def test_roll(vehicle, degree_per_second):
     vehicle.channels.overrides[Throttle] = None
     log_to_csv(vehicle, command="Roll test complete")
 
-# Other functions (test_pitch, test_yaw, main, etc.) remain the same
+
+def test_yaw(vehicle, degree_per_second):
+    yaw_left, yaw_right = calculate_yaw_pwm(degree_per_second)
+    print("Testing yaw channel Wait for stabilization mode")
+    while vehicle.mode.name != "STABILIZE":
+        time.sleep(1)
+    time.sleep(5)
+    vehicle.mode = VehicleMode("ACRO")
+    log_to_csv(vehicle, yaw=yaw_left, command="Yaw test - left")
+    vehicle.channels.overrides[Yaw] = yaw_left
+    time.sleep(5)
+    vehicle.channels.overrides[Yaw] = yaw_right
+    log_to_csv(vehicle, yaw=yaw_right, command="Yaw test - right")
+    time.sleep(3)
+    vehicle.channels.overrides[Yaw] = None
+    vehicle.channels.overrides[Throttle] = None
+    log_to_csv(vehicle, command="Yaw test complete")
+
+
+def test_pitch(vehicle, degree_per_second):
+    pitch_down, pitch_up = calculate_pitch_pwm(degree_per_second)
+    print("Testing pitch channel Wait for stabilization mode")
+    while vehicle.mode.name != "STABILIZE":
+        time.sleep(1)
+    time.sleep(5)
+    vehicle.mode = VehicleMode("ACRO")
+    log_to_csv(vehicle, pitch=pitch_down, command="Pitch test - down")
+    vehicle.channels.overrides[Pitch] = pitch_down
+    time.sleep(5)
+    vehicle.channels.overrides[Pitch] = pitch_up
+    log_to_csv(vehicle, pitch=pitch_up, command="Pitch test - up")
+    time.sleep(3)
+    vehicle.channels.overrides[Pitch] = None
+    vehicle.channels.overrides[Throttle] = None
+    log_to_csv(vehicle, command="Pitch test complete")
+
 
 def main():
     args = parse_arguments()
@@ -181,7 +224,10 @@ def main():
             test_roll(vehicle, 20)
             vehicle.mode = VehicleMode("STABILIZE")
             time.sleep(5)
-            # Other tests (pitch, yaw) would go here
+            test_pitch(vehicle, 15)
+            vehicle.mode = VehicleMode("STABILIZE")
+            time.sleep(5)
+            test_yaw(vehicle, 30)
 
         else:
             vehicle.mode = VehicleMode("AUTO")
@@ -197,6 +243,7 @@ def main():
             sitl.stop()
         pygame.quit()
         print("Completed")
+
 
 if __name__ == "__main__":
     main()

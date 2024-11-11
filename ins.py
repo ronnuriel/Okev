@@ -2,6 +2,8 @@ from dronekit import connect, VehicleMode
 import time
 from pymavlink import mavutil
 import logging
+import csv
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(
@@ -14,12 +16,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Initialize CSV file for telemetry data
+csv_file = open("telemetry_log.csv", mode="w", newline="")
+csv_writer = csv.writer(csv_file)
+csv_writer.writerow(["time", "vehicle_mode", "yaw", "pitch", "throttle", "latitude", "longitude", "altitude", "command_sent"])
+
 def set_raw_imu_stream_rate(vehicle, rate_hz=10):
-    """
-    Sets the stream rate for RAW_IMU messages.
-    :param vehicle: DroneKit vehicle instance.
-    :param rate_hz: The desired rate in Hz (e.g., 10 for 10 Hz).
-    """
     vehicle._master.mav.request_data_stream_send(
         vehicle._master.target_system,
         vehicle._master.target_component,
@@ -30,11 +32,6 @@ def set_raw_imu_stream_rate(vehicle, rate_hz=10):
     logger.info(f"Requested RAW_IMU stream at {rate_hz} Hz")
 
 def set_gps_stream_rate(vehicle, rate_hz=1):
-    """
-    Sets the stream rate for GPS_RAW_INT messages.
-    :param vehicle: DroneKit vehicle instance.
-    :param rate_hz: The desired rate in Hz (e.g., 1 for 1 Hz).
-    """
     vehicle._master.mav.request_data_stream_send(
         vehicle._master.target_system,
         vehicle._master.target_component,
@@ -45,34 +42,26 @@ def set_gps_stream_rate(vehicle, rate_hz=1):
     logger.info(f"Requested GPS_RAW_INT stream at {rate_hz} Hz")
 
 def imu_callback(self, name, message):
-    """
-    Callback function to handle incoming RAW_IMU messages and print INS data.
-    """
-    # Accelerometer data in raw units (may vary based on autopilot)
-    logger.info(f"Accelerometer: x={message.xacc}, y={message.yacc}, z={message.zacc}")
+    # Extract yaw, pitch, and throttle data
+    yaw = message.zgyro
+    pitch = message.xgyro
+    throttle = 1500  # Placeholder, replace with actual throttle if available
+    mode = self.mode.name  # Capture the current vehicle mode
 
-    # Gyroscope data in raw units
-    logger.info(f"Gyroscope: x={message.xgyro}, y={message.ygyro}, z={message.zgyro}")
-
-    # Magnetometer data in raw units
-    logger.info(f"Magnetometer: x={message.xmag}, y={message.ymag}, z={message.zmag}")
-    logger.info("-" * 50)
+    # Log to CSV
+    csv_writer.writerow([datetime.now(), mode, yaw, pitch, throttle, "", "", "", "IMU data"])
 
 def gps_callback(self, name, message):
-    """
-    Callback function to handle incoming GPS_RAW_INT messages and print GPS data.
-    """
-    # GPS data in degrees and meters
+    # Extract GPS data
     latitude = message.lat / 1e7  # Convert to degrees
     longitude = message.lon / 1e7  # Convert to degrees
     altitude = message.alt / 1e3  # Convert to meters
+    mode = self.mode.name  # Capture the current vehicle mode
 
-    logger.info(f"GPS Location: Latitude={latitude:.7f}, Longitude={longitude:.7f}, Altitude={altitude:.2f} meters")
-    logger.info(f"Satellites Visible: {message.satellites_visible}, Fix Type: {message.fix_type}")
-    logger.info("-" * 50)
+    # Log to CSV
+    csv_writer.writerow([datetime.now(), mode, "", "", "", latitude, longitude, altitude, "GPS data"])
 
 def main():
-    # Connect to the Vehicle
     connection_string = "udp:0.0.0.0:14551"  # Replace with your connection string
     logger.info(f'Connecting to vehicle on: {connection_string}')
     vehicle = connect(connection_string, wait_ready=True)
@@ -90,16 +79,20 @@ def main():
 
         # Keep the script running to listen to messages
         while True:
-            logger.info(f"VEHICLE MODE: {vehicle.mode}")
+            # Capture the vehicle mode and any command sent
+            mode = vehicle.mode.name
+            command_sent = ""  # Placeholder for commands if sent in the future
+            csv_writer.writerow([datetime.now(), mode, "", "", "", "", "", "", f"Mode: {mode}, Command: {command_sent}"])
+            logger.info(f"VEHICLE MODE: {mode}")
             time.sleep(1)  # Adjust sleep time as needed
 
     except KeyboardInterrupt:
         logger.info("Interrupted by user.")
 
     finally:
-        # Ensure the vehicle is closed properly
         logger.info("Closing vehicle connection")
         vehicle.close()
+        csv_file.close()
 
 
 if __name__ == "__main__":

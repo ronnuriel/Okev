@@ -1,7 +1,6 @@
 import csv
 import time
 import argparse
-import pygame
 from datetime import datetime
 from dronekit import connect, VehicleMode
 
@@ -23,7 +22,7 @@ PITCH_RATE_FACTOR = 0
 control_params = {Pitch: NEUTRAL_PWM, Yaw: NEUTRAL_PWM, Throttle: NEUTRAL_PWM, Roll: NEUTRAL_PWM}
 
 # Initialize CSV file for telemetry data
-csv_file = open("telemetry_log.csv", mode="w", newline="")
+csv_file = open("Local_log.csv", mode="w", newline="")
 csv_writer = csv.writer(csv_file)
 csv_writer.writerow(["time", "vehicle_mode", "pitch", "yaw", "roll", "throttle", "command_sent"])
 
@@ -47,6 +46,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='Commands Arduplane using waypoints.')
     parser.add_argument('--connect', help="Vehicle connection target string.")
     parser.add_argument('--test', action='store_true', help="Perform a test of pitch, yaw, and roll channels.")
+    parser.add_argument('--ground', action='store_true', help="Perform ground tests.")
     return parser.parse_args()
 
 
@@ -97,9 +97,11 @@ def ground_control_response_test(vehicle, control_channel, pwm_change):
     time.sleep(1)  # Wait briefly to allow response
 
     # Record actual PWM value if available (some flight controllers may not report this)
-    actual_pwm = vehicle.channels[control_channel]
-    log_to_csv(vehicle, control_channel=control_channel, expected_pwm=expected_pwm, actual_pwm=actual_pwm,
-               command=f"{control_channel} test - PWM {pwm_change}")
+    actual_pwm = "Unavailable"
+    log_to_csv(vehicle,
+               command=f"{control_channel} control channel test - expected: {expected_pwm}, actual: {actual_pwm}")
+
+    print(f"Expected PWM: {expected_pwm}, Actual PWM: {actual_pwm}")
 
     # Reset to neutral
     vehicle.channels.overrides[control_channel] = None
@@ -111,6 +113,12 @@ def ground_tests(vehicle):
     Perform initial ground tests to verify sensor and basic control functionality.
     """
     print("Starting ground tests...")
+    print("Waiting for MANUAL mode...")
+
+    while vehicle.mode.name != "MANUAL":
+        time.sleep(1)
+
+    print("Vehicle in MANUAL mode. Starting tests...")
 
     # 1. Check GPS lock status
     if vehicle.gps_0.fix_type < 2:
@@ -204,12 +212,26 @@ def main():
         sitl.launch(sitl_args, await_ready=True, restart=True)
         connection_string = 'udp:127.0.0.1:14550'
 
-    print(f'Connecting to vehicle on: {connection_string}')
-    vehicle = connect(connection_string, wait_ready=True)
+    # connection_string = "/dev/ttyACM0" # For USB connection
+    connection_string = "/dev/ttyTHS0"
+    vehicle = connect(connection_string, baud=57600)
 
     try:
-        # Perform ground tests
-        ground_tests(vehicle)
+        # Check if vehicle is connected
+        print("Connected to vehicle.")
+        log_to_csv(vehicle, command="Vehicle connected")
+
+        # Wait for vehicle to initialize
+        print("Waiting for vehicle to initialize...")
+        while not vehicle.is_armable:
+            time.sleep(1)
+
+        if args.ground:
+            print("---------------------------------------------------")
+            print("Performing ground tests...")
+            print("---------------------------------------------------")
+            ground_tests(vehicle)
+            vehicle.mode = VehicleMode("AUTO")
 
         pitch_rate = vehicle.parameters.get('ACRO_PITCH_RATE', None)
         yaw_rate = vehicle.parameters.get('ACRO_YAW_RATE', None)
@@ -221,6 +243,9 @@ def main():
         PITCH_RATE_FACTOR = 500 / pitch_rate if pitch_rate else 1
 
         if args.test:
+            print("---------------------------------------------------")
+            print("Performing test of pitch, yaw, and roll channels...")
+            print("---------------------------------------------------")
             test_roll(vehicle, 20)
             vehicle.mode = VehicleMode("STABILIZE")
             time.sleep(5)
@@ -228,20 +253,21 @@ def main():
             vehicle.mode = VehicleMode("STABILIZE")
             time.sleep(5)
             test_yaw(vehicle, 30)
+            vehicle.mode = VehicleMode("STABILIZE")
 
         else:
             vehicle.mode = VehicleMode("AUTO")
             log_to_csv(vehicle, command="Starting in AUTO mode")
 
     finally:
-        vehicle.mode = VehicleMode("RTL")
-        log_to_csv(vehicle, command="RTL mode activated")
+        vehicle.mode = VehicleMode("STABILIZE")
+        log_to_csv(vehicle, command="STABILIZE mode activated")
         vehicle.close()
         csv_file.close()
 
         if sitl:
             sitl.stop()
-        pygame.quit()
+
         print("Completed")
 
 

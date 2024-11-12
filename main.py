@@ -67,22 +67,74 @@ def arm_and_takeoff(vehicle):
     print("Vehicle armed. Takeoff handled in AUTO mode.")
 
 
+####################################################
+#  ____   ___  _     _       ______        ___   _
+# |  _ \ / _ \| |   | |     |  _ \ \      / / \ | |
+# | |_) | | | | |   | |     | |_) \ \ /\ / /|  \| |
+# |  _ <| |_| | |___| |___  |  __/ \ V  V / | |\  |
+# |_| \_\\___/|_____|_____| |_|     \_/\_/  |_| \_|
+####################################################
 def calculate_roll_pwm(degree_per_second):
     roll_left = NEUTRAL_PWM - (degree_per_second * ROLL_RATE_FACTOR)
     roll_right = NEUTRAL_PWM + (degree_per_second * ROLL_RATE_FACTOR)
     return int(roll_left), int(roll_right)
 
 
+def calculate_roll_left_pwm(degree_per_second):
+    roll_left = NEUTRAL_PWM - (degree_per_second * ROLL_RATE_FACTOR)
+    return int(roll_left)
+
+
+def calculate_roll_right_pwm(degree_per_second):
+    roll_right = NEUTRAL_PWM + (degree_per_second * ROLL_RATE_FACTOR)
+    return int(roll_right)
+
+
+####################################################
+# __   __ ___        __  ______        ___   _
+# \ \ / // \ \      / / |  _ \ \      / / \ | |
+#  \ V // _ \ \ /\ / /  | |_) \ \ /\ / /|  \| |
+#   | |/ ___ \ V  V /   |  __/ \ V  V / | |\  |
+#   |_/_/   \_\_/\_/    |_|     \_/\_/  |_| \_|
+####################################################
 def calculate_yaw_pwm(degree_per_second):
     yaw_left = NEUTRAL_PWM - (degree_per_second * YAW_RATE_FACTOR)
     yaw_right = NEUTRAL_PWM + (degree_per_second * YAW_RATE_FACTOR)
     return int(yaw_left), int(yaw_right)
 
 
+def calculate_yaw_left_pwm(degree_per_second):
+    yaw_left = NEUTRAL_PWM - (degree_per_second * YAW_RATE_FACTOR)
+    return int(yaw_left)
+
+
+def calculate_yaw_right_pwm(degree_per_second):
+    yaw_right = NEUTRAL_PWM + (degree_per_second * YAW_RATE_FACTOR)
+    return int(yaw_right)
+
+
+####################################################
+#  ____ ___ _____ ____ _   _   ______        ___   _
+# |  _ \_ _|_   _/ ___| | | | |  _ \ \      / / \ | |
+# | |_) | |  | || |   | |_| | | |_) \ \ /\ / /|  \| |
+# |  __/| |  | || |___|  _  | |  __/ \ V  V / | |\  |
+# |_|  |___| |_| \____|_| |_| |_|     \_/\_/  |_| \_|
+####################################################
+
 def calculate_pitch_pwm(degree_per_second):
     pitch_down = NEUTRAL_PWM - (degree_per_second * PITCH_RATE_FACTOR)
     pitch_up = NEUTRAL_PWM + (degree_per_second * PITCH_RATE_FACTOR)
     return int(pitch_down), int(pitch_up)
+
+
+def calculate_pitch_down_pwm(degree_per_second):
+    pitch_down = NEUTRAL_PWM - (degree_per_second * PITCH_RATE_FACTOR)
+    return int(pitch_down)
+
+
+def calculate_pitch_up_pwm(degree_per_second):
+    pitch_up = NEUTRAL_PWM + (degree_per_second * PITCH_RATE_FACTOR)
+    return int(pitch_up)
 
 
 def ground_control_response_test(vehicle, control_channel, pwm_change):

@@ -137,6 +137,15 @@ def calculate_pitch_up_pwm(degree_per_second):
     return int(pitch_up)
 
 
+################################
+#  _____ _____ ____ _____ ____
+# |_   _| ____/ ___|_   _/ ___|
+#   | | |  _| \___ \ | | \___ \
+#   | | | |___ ___) || |  ___) |
+#   |_| |_____|____/ |_| |____/
+################################
+
+
 def ground_control_response_test(vehicle, control_channel, pwm_change):
     """
     Tests if the control channel responds on the ground by changing the PWM and observing the actual response.
@@ -146,7 +155,7 @@ def ground_control_response_test(vehicle, control_channel, pwm_change):
     # Apply an incremental change to the control channel
     expected_pwm = NEUTRAL_PWM + pwm_change
     vehicle.channels.overrides[control_channel] = expected_pwm
-    time.sleep(1)  # Wait briefly to allow response
+    time.sleep(4)  # Wait briefly to allow response
 
     # Record actual PWM value if available (some flight controllers may not report this)
     actual_pwm = "Unavailable"
@@ -167,7 +176,7 @@ def ground_tests(vehicle):
     print("Starting ground tests...")
     print("Waiting for MANUAL mode...")
 
-    while vehicle.mode.name != "MANUAL":
+    while vehicle.mode.name != "STABILIZE":
         time.sleep(1)
 
     print("Vehicle in MANUAL mode. Starting tests...")
